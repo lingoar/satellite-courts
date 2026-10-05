@@ -210,6 +210,9 @@ h1, h2, h3, p { margin: 0; }
 .pill.some { --st: var(--warn); }
 .pill.full { --st: var(--bad); }
 .pill.full::before { border-radius: 2px; }
+.pill.closed { --st: var(--ink); }
+.pill.closed::before { border-radius: 2px; background: repeating-linear-gradient(135deg, var(--st) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px var(--st); }
+.v-school { font-size: .8rem; color: var(--ink-2); }
 .pill.some::before { background: linear-gradient(90deg, var(--st) 50%, transparent 50%); box-shadow: inset 0 0 0 1.5px var(--st); }
 .v-links { display: flex; gap: 12px; font-size: .8rem; }
 .v-links a { color: var(--ink-2); }
@@ -240,6 +243,15 @@ h1, h2, h3, p { margin: 0; }
   background: color-mix(in srgb, var(--bg) 52%, transparent);
 }
 .is-past .track::after { width: 100%; }
+.school {
+  position: absolute; top: 0; bottom: 0; left: calc(var(--s) * 100%); width: calc(var(--w) * 100%); pointer-events: none;
+  padding: 0 9px; overflow: hidden; white-space: nowrap; color: var(--ink);
+  font: 600 .72rem/var(--lane-h) var(--f-data); letter-spacing: .1em; text-transform: uppercase;
+  background:
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 20%, transparent) 0 2px, transparent 2px 7px),
+    color-mix(in srgb, var(--bg) 82%, var(--ink));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent);
+}
 .blk {
   position: absolute; top: 3px; bottom: 3px; left: calc(var(--s) * 100%); width: calc(var(--w) * 100%); min-width: 4px;
   padding: 0 6px; border-radius: 3px; overflow: hidden; text-align: left; white-space: nowrap;
@@ -312,6 +324,7 @@ dialog h2 { font: 720 1.9rem/1.05 var(--f-display); letter-spacing: -.025em; pad
 .wk .track { height: 9px; box-shadow: none; border-radius: 2px; }
 .wk .blk { top: 0; bottom: 0; border-radius: 0; box-shadow: none; padding: 0; animation: none; }
 .wk .blk span, .wk .lane-n { display: none; }
+.wk .school { font-size: 0; padding: 0; box-shadow: none; }
 .wk-axis { display: flex; justify-content: space-between; margin-left: calc(6.2em + 12px); font: 600 .7rem var(--f-data); color: var(--ink-2); }
 
 /* ---------- narrow ---------- */
@@ -325,7 +338,7 @@ dialog h2 { font: 720 1.9rem/1.05 var(--f-display); letter-spacing: -.025em; pad
   .v-head { grid-column: 1; }
   .v-status { grid-column: 1; }
   .v-links { grid-column: 2; grid-row: 1 / span 2; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
-  .v-note { grid-column: 1 / -1; }
+  .v-note, .v-school { grid-column: 1 / -1; }
   .v-list { display: block; }
   .v-odd { grid-column: 1; padding-left: 0; }
   .blk { padding: 0 3px; font-size: .72rem; }

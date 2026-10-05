@@ -71,7 +71,9 @@
     S.byId = new Map();
     for (const v of S.venues) {
       v.n = Math.max(1, v.courts);
-      v.lights = !!CFG.tabs.find((t) => t.gid === v.gid).lights;
+      const tab = CFG.tabs.find((t) => t.gid === v.gid);
+      v.lights = !!tab.lights;
+      v.school = tab.school || null;
       for (const e of v.entries) {
         e.venue = v;
         if (!e.courts.length && v.n === 1) e.courts = [1];
@@ -96,7 +98,20 @@
   const matches = (e) => !S.off.has(e.org) && (!S.q || e.hay.includes(S.q));
   const shown = () => (S.lit ? S.venues.filter((v) => v.lights) : S.venues);
 
+  // Hours a school site is closed to the public on this date.
+  function schoolBlocks(v, date) {
+    const s = v.school;
+    if (!s || date < s.first || date > s.last) return [];
+    if (s.off.some(([a, b]) => date >= a && date <= (b || a))) return [];
+    const dow = P.dowOf(P.ymdToDn(date));
+    return s.hours.filter((h) => h.days.includes(dow) && (!h.from || date >= h.from))
+      .map((h) => ({ start: h.start, end: h.end, label: h.label || 'School in session' }));
+  }
+
   function statusAt(v, date, t) {
+    const school = schoolBlocks(v, date);
+    const inSchool = school.find((b) => b.start <= t && t < b.end);
+    if (inSchool) return { open: 0, n: v.n, until: inSchool.end, next: Infinity, any: true, school: inSchool };
     const busy = new Set();
     let unnamed = 0, until = Infinity, next = Infinity, any = false;
     for (const e of dayEntries(date, v)) {
@@ -107,13 +122,18 @@
         until = Math.min(until, e.end);
       } else if (e.start > t) next = Math.min(next, e.start);
     }
+    for (const b of school) if (b.start > t) next = Math.min(next, b.start);
     const taken = Math.min(v.n, busy.size + unnamed);
     return { open: v.n - taken, n: v.n, until, next, any };
   }
 
   function statusHTML(st) {
     let cls, text, sub;
-    if (st.open === st.n) {
+    if (st.school) {
+      cls = 'closed';
+      text = 'Closed to the public';
+      sub = `${st.school.label.toLowerCase()} until ${fmt(st.until)}`;
+    } else if (st.open === st.n) {
       cls = 'open';
       text = st.n === 1 ? 'Open' : `All ${st.n} open`;
       sub = st.next < Infinity ? `until ${fmt(st.next)}` : st.any ? 'for the rest of the day' : 'all day';
@@ -196,14 +216,21 @@
       title="${esc(tip)}" aria-label="${esc(`${courtsLabel(e.courts)}, ${tip}`)}"><span>${e.guess ? '≈ ' : ''}${esc(whoLabel(e))}</span></button>`;
   }
 
-  function lanesHTML(v, entries, ax, seq) {
+  function schoolHTML(b, ax, labelled) {
+    const span = ax.end - ax.start;
+    const a = clamp(b.start, ax.start, ax.end), z = clamp(b.end, ax.start, ax.end);
+    if (z <= a) return '';
+    return `<div class="school" style="--s:${((a - ax.start) / span).toFixed(4)};--w:${((z - a) / span).toFixed(4)}" title="${esc(`${b.label}, closed to the public ${fmtRange(b.start, b.end)}`)}">${labelled ? esc(b.label) : ''}</div>`;
+  }
+
+  function lanesHTML(v, entries, ax, seq, school = []) {
     const timed = entries.filter((e) => e.start != null);
     const lanes = [];
     for (let c = 1; c <= v.n; c++) lanes.push({ label: c, es: timed.filter((e) => e.courts.includes(c)) });
     const loose = timed.filter((e) => !e.courts.length);
     if (loose.length) lanes.push({ label: '?', es: loose });
-    return `<div class="v-lanes">${lanes.map((l) =>
-      `<div class="lane"><span class="lane-n" title="${l.label === '?' ? 'Court not listed in the sheet' : `Court ${l.label}`}">${l.label}</span><div class="track">${l.es.map((e) => blockHTML(e, seq.i++, ax)).join('')}</div></div>`).join('')}</div>`;
+    return `<div class="v-lanes">${lanes.map((l, li) =>
+      `<div class="lane"><span class="lane-n" title="${l.label === '?' ? 'Court not listed in the sheet' : `Court ${l.label}`}">${l.label}</span><div class="track">${school.map((b) => schoolHTML(b, ax, li === 0)).join('')}${l.es.map((e) => blockHTML(e, seq.i++, ax)).join('')}</div></div>`).join('')}</div>`;
   }
 
   const mapUrl = (v) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${v.name} tennis courts, ${CFG.city}`)}`;
@@ -227,6 +254,7 @@
       const es = dayEntries(S.date, v).sort((a, b) => (a.start ?? 1e9) - (b.start ?? 1e9));
       const odd = es.filter((e) => e.start == null);
       const fav = S.favs.has(v.id);
+      const school = schoolBlocks(v, S.date);
       return `<article class="venue" data-v="${v.id}">
         <div class="v-info">
           <div class="v-head">
@@ -234,10 +262,11 @@
             <h3><button type="button" class="v-name" data-venue="${v.id}">${esc(v.name)}</button></h3>
           </div>
           <div class="v-status" data-status="${v.id}"></div>
+          ${school.length ? `<p class="v-school">School day. Closed to the public ${esc(school.map((b) => fmtRange(b.start, b.end)).join(' and '))}.</p>` : ''}
           <div class="v-links"><span class="lights${v.lights ? '' : ' none'}">${v.lights ? BULB + 'Lights' : 'No lights'}</span><a href="${mapUrl(v)}" target="_blank" rel="noopener">Map</a><a href="${tabUrl(v)}" target="_blank" rel="noopener">Sheet tab</a></div>
           ${v.notices.length ? `<details class="v-note"><summary>Notice from the city</summary>${v.notices.map((n) => `<p>${esc(n)}</p>`).join('')}</details>` : ''}
         </div>
-        ${lanesHTML(v, es, S.axis, seq)}
+        ${lanesHTML(v, es, S.axis, seq, school)}
         ${odd.length ? `<p class="v-odd">${odd.map((e) => `<button type="button" data-e="${e.id}">${esc(`${courtsLabel(e.courts)} · ${fullLabel(e)} · time unclear (“${e.raw.time}”)`)}</button>`).join('<br>')}</p>` : ''}
         ${es.length ? `<ul class="v-list">${es.map((e) => `<li><button type="button" data-e="${e.id}" class="${matches(e) ? '' : 'is-dim'}"><span class="t">${e.guess ? '≈ ' : ''}${esc(e.start == null ? 'Time unclear' : fmtRange(e.start, e.end))}</span><span class="w"><i class="dot org-${e.org}"></i> <b>${esc(whoLabel(e))}</b> · ${esc(courtsLabel(e.courts))}</span></button></li>`).join('')}</ul>` : ''}
       </article>`;
@@ -375,10 +404,11 @@
     openDlg(`
       <p class="eyebrow">${v.n} ${v.n === 1 ? 'court' : 'courts'} listed · ${v.lights ? 'lights' : 'no lights'} · ${count} ${count === 1 ? 'reservation' : 'reservations'} ahead</p>
       <h2 id="dlgTitle">${esc(v.name)}</h2>
+      ${v.school ? '<p class="flag">A school site. Courts are closed to the public while school is in session, shown hatched below.</p>' : ''}
       ${v.notices.map((n) => `<p class="flag" style="white-space:pre-line">${esc(n)}</p>`).join('')}
       <div class="wk" style="--hours:${(b - a) / 60}">
         <div class="wk-axis"><span>${fmt(a)}</span><span>${fmt((a + b) / 2)}</span><span>${fmt(b)}</span></div>
-        ${dates.map((d) => `<div class="wk-row${d === S.date ? ' is-sel' : ''}"><button type="button" data-date="${d}" data-close>${esc(fmtDay(d, { weekday: 'short', month: 'short', day: 'numeric' }))}</button>${lanesHTML(v, dayEntries(d, v), ax, seq)}</div>`).join('')}
+        ${dates.map((d) => `<div class="wk-row${d === S.date ? ' is-sel' : ''}"><button type="button" data-date="${d}" data-close>${esc(fmtDay(d, { weekday: 'short', month: 'short', day: 'numeric' }))}</button>${lanesHTML(v, dayEntries(d, v), ax, seq, schoolBlocks(v, d))}</div>`).join('')}
       </div>
       <div class="dlg-links"><a class="ghost" href="${tabUrl(v)}" target="_blank" rel="noopener">Open this tab in the sheet</a><a class="ghost" href="${mapUrl(v)}" target="_blank" rel="noopener">Map</a></div>`);
   }
