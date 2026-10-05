@@ -45,6 +45,7 @@ const COURTS_CONFIG = {
   tabs: [
     { gid: '577575228', name: 'Columbia Park', lights: true },
     { gid: '447685095', name: 'Orchard Gardens' },
+    { gid: '1660808941', name: 'Seven Seas' },
     { gid: '0', name: 'Fremont High School', lights: true, school: FREMONT_HIGH_2026_27 },
     { gid: '377964083', name: 'Sunnyvale Middle School', lights: true, school: SUNNYVALE_MIDDLE_2026_27 },
     { gid: '507680901', name: 'Serra Park', lights: true },
@@ -55,7 +56,6 @@ const COURTS_CONFIG = {
     { gid: '1847099568', name: 'Encinal Park', lights: true },
     { gid: '375641675', name: 'Lakewood Park', lights: true },
     { gid: '972547779', name: 'Fairwood Park', lights: true },
-    { gid: '1660808941', name: 'Seven Seas' },
   ],
 };
 
