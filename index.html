@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Satellite Courts</title>
+<meta name="description" content="See which Sunnyvale park and school tennis courts are reserved, and when they are open. Read live from the city's Satellite Court Reservations sheet.">
+<meta name="theme-color" content="#eef2ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1613" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23d9f23f'/%3E%3Cpath d='M4 7c7 4 7 14 0 18M28 7c-7 4-7 14 0 18' fill='none' stroke='%23fff' stroke-width='2.2'/%3E%3C/svg%3E">
+<script>
+  try { var t = JSON.parse(localStorage.getItem('sc:theme')); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top wrap">
+  <div class="brand">
+    <svg class="brand-ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15"/><path d="M4 7c7 4 7 14 0 18M28 7c-7 4-7 14 0 18"/></svg>
+    <div>
+      <h1>Satellite Courts</h1>
+      <p>Sunnyvale park and school tennis courts</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="sync" id="sync" type="button" title="Check the sheet again"><i></i><span id="syncText">Loading</span></button>
+    <a class="ghost" id="sheetLink" target="_blank" rel="noopener">City sheet</a>
+    <button class="ghost icon" id="theme" type="button" aria-label="Switch between light and dark">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="rail-wrap wrap" aria-label="Choose a day">
+  <button class="rail-btn" id="prevDay" type="button" aria-label="Previous day">‹</button>
+  <div class="rail" id="rail"></div>
+  <button class="rail-btn" id="nextDay" type="button" aria-label="Next day">›</button>
+</nav>
+
+<section class="hero wrap">
+  <h2 id="heroDate">&nbsp;</h2>
+  <p id="heroStat">&nbsp;</p>
+</section>
+
+<section class="controls wrap">
+  <label class="search">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <input id="q" type="search" placeholder="Find a coach, team or park" autocomplete="off" aria-label="Find a coach, team or park">
+  </label>
+  <div class="seg" role="group" aria-label="View">
+    <button type="button" data-view="board">Courts</button>
+    <button type="button" data-view="agenda">List</button>
+  </div>
+  <label class="sort">
+    <span>Order</span>
+    <select id="sort">
+      <option value="sheet">As in the sheet</option>
+      <option value="open">Most open first</option>
+    </select>
+  </label>
+  <button type="button" class="toggle" id="lit" aria-pressed="false">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a4.5 4.5 0 0 0-2.6 8.2c.4.3.6.7.6 1.1v.7h4v-.7c0-.4.2-.8.6-1.1A4.5 4.5 0 0 0 8 1.5zM6.2 13h3.6v1.2a.8.8 0 0 1-.8.8H7a.8.8 0 0 1-.8-.8z"/></svg>
+    Lit courts only
+  </button>
+  <div class="legend" id="legend" role="group" aria-label="Show or hide groups"></div>
+</section>
+
+<div class="scrub" id="scrub">
+  <div class="wrap scrub-in">
+    <div class="readout">
+      <span class="readout-label" id="readLabel">At</span>
+      <output class="readout-time" id="readTime" for="cursor">–</output>
+      <button class="now-btn" id="nowBtn" type="button">Now</button>
+    </div>
+    <div class="axis">
+      <div class="axis-track">
+        <input class="scrub-range" id="cursor" type="range" step="15" aria-label="Time of day">
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap" id="main"></main>
+
+<footer class="foot wrap">
+  <p><strong>Unofficial.</strong> This page reads the city's public <a id="sheetLink2" target="_blank" rel="noopener">Satellite Court Reservations</a> sheet in your browser and checks it again every few minutes. The sheet is the source of truth.</p>
+  <p>Open means no reservation is listed for that court. Someone may still be playing on it. Courts are counted from the court numbers that appear in the sheet, so a site may have more courts than shown.</p>
+  <p>Entries marked ≈ are a best reading of an unclear cell: a time with no AM or PM, or a date that doesn't match its weekday.</p>
+  <details id="notes" hidden>
+    <summary></summary>
+    <ul></ul>
+  </details>
+</footer>
+
+<dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
+
+<script src="config.js"></script>
+<script src="parser.js"></script>
+<script src="snapshot.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
